@@ -1,9 +1,19 @@
 #define GL_SILENCE_DEPRECATION
 
+#include "../imgui/imgui.h"
+#include "../imgui/imgui_impl_glfw.h"
+#include "../imgui/imgui_impl_opengl3.h"
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <math.h>
+
+#include "../shaders/shader.h"
+#include "../camera/camera.h"
 
 int main(){
     /* INIT GLFW */
@@ -33,8 +43,40 @@ int main(){
         exit(EXIT_FAILURE);
     }
 
+    Shader my_shader = Shader("../shaders/shader.shader");
+
+    float vertex_positions[] = {
+        0.0f, 0.0f, 0.5f, 
+        0.5f, 0.0f, 0.5f, 
+        0.0f, 0.0f, 0.0f, 
+
+        0.5f, 0.0f, 0.5f,
+        0.5f, 0.0f, 0.0f, 
+        0.0f, 0.0f, 0.0f,
+    };
+
+    float vertex_colors[] = {
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+    };
+
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
+
+    Camera myCamera;
+    myCamera.front = glm::vec3(0.0f, 0.0f, -2.0f);
+    myCamera.position = glm::vec3(0.0f, 0.0f, 3.0f);
+    myCamera.up = glm::vec3(0.0f, 1.0f, 0.0f);
+
     /* MAIN RENDER LOOP */
     while(!glfwWindowShouldClose(win)){
+
+        myCamera.move(&win, &deltaTime, &lastFrame);
 
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
