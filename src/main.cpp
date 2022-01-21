@@ -1,4 +1,5 @@
 #define GL_SILENCE_DEPRECATION
+#define STB_IMAGE_IMPLEMENTATION
 
 #include "../imgui/imgui.h"
 #include "../imgui/imgui_impl_glfw.h"
@@ -10,10 +11,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <vector>
 #include <math.h>
+#include "../stb/stb_image.h"
 
 #include "../shaders/shader.h"
 #include "../camera/camera.h"
+
 
 int main(){
     /* INIT GLFW */
@@ -53,45 +57,69 @@ int main(){
 
     Shader my_shader = Shader("../shaders/shader.shader");
 
-    float vertex_positions[] = {
-        
-        0.0f, 0.0f, 0.5f, 
-        0.5f, 0.0f, 0.5f, 
-        0.0f, 0.0f, 0.0f, 
+    //loads height map
+    stbi_set_flip_vertically_on_load(true);
+    int w, h, num_channels;
+    unsigned char *data = stbi_load("../resources/heightmap.png", &w, &h, &num_channels, 0);
+    if (data){
+        std::cout << "Loaded heightmap of size " << h << " x " << w << std::endl;
+    }
+    else{
+        std::cout << "Failed to load texture" << std::endl;
+    }
 
-        0.5f, 0.0f, 0.5f,
-        0.5f, 0.0f, 0.0f, 
-        0.0f, 0.0f, 0.0f,
-  
-    };
+    //sets up vertex position
+    std::vector<float> vertex_positions;
+    float y_scale = 64.0f / 256.0f, y_shift = 16.0f;
+    int rez = 1;
+    unsigned byte_per_pixel = num_channels;
+    for(int i = 0; i < h; i++)
+    {
+        for(int j = 0; j < w; j++)
+        {
+            unsigned char* pixel_offset = data + (j + w * i) * byte_per_pixel;
+            unsigned char y = pixel_offset[0];
 
-    float vertex_colors[] = {
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
+            // vertex
+            vertex_positions.push_back( -h/2.0f + h*i/(float)h );   // vx
+            vertex_positions.push_back( (int) y * y_scale - y_shift);   // vy
+            vertex_positions.push_back( -w/2.0f + w*j/(float)w );   // vz
+        }
+    }
+    std::cout << "Loaded " << vertex_positions.size() / 3 << " vertex_positions" << std::endl;
+    stbi_image_free(data);
 
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-    };
+    std::vector<unsigned> indices;
+    for(unsigned i = 0; i < h - 1; i += rez){
+        for (unsigned j = 0; j < w; j += rez){
+            for (unsigned k = 0; k < 2; k++){
+                indices.push_back(j + w * (i + k * rez));
+            }
+        }
+    }
+    std::cout << "Loaded " << indices.size() << " indices" << std::endl;
+    
+    const int num_strips = (h-1)/rez;
+    const int tri_per_strip = (w/rez)*2-2;
+    std::cout << "Created lattice of " << num_strips << " strips with " << tri_per_strip << " triangles each" << std::endl;
+    std::cout << "Created " << num_strips * tri_per_strip << " triangles total" << std::endl;
 
-    unsigned int vao;
+    // first, configure the cube's VAO (and vbo + ibo)
+    unsigned int vao, vbo, ibo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    unsigned int position_buffer;
-    glGenBuffers(1, &position_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, position_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_positions), vertex_positions, GL_STATIC_DRAW);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_positions.size() * sizeof(float), &vertex_positions[0], GL_STATIC_DRAW);
+
+    // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    unsigned int color_buffer;
-    glGenBuffers(1, &color_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, color_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_colors), vertex_colors, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned), &indices[0], GL_STATIC_DRAW);
 
     float delta_time = 0.0f;
     float last_frame = 0.0f;
@@ -141,7 +169,13 @@ int main(){
         ImGui::Render();
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLES, 0, sizeof(vertex_positions) / 3);   
+
+        for(unsigned strip = 0; strip < num_strips; strip++){
+            glDrawElements(GL_TRIANGLE_STRIP,   // primitive type
+                           tri_per_strip+2,   // number of indices to render
+                           GL_UNSIGNED_INT,     // index data type
+                           (void*)(sizeof(unsigned) * (tri_per_strip+2) * strip)); // offset to starting index
+        }
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(win); //swap front and back buffer
@@ -153,9 +187,6 @@ int main(){
     ImGui::DestroyContext();
     glfwDestroyWindow(win);
     glfwTerminate();
-
     return 0;
-
-
-
 }
+
