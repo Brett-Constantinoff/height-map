@@ -1,5 +1,8 @@
 all: main
 
+debug: main.o shader.o camera.o imgui.o 
+	g++ main.o shader.o camera.o imgui_demo.o imgui_draw.o imgui_impl_glfw.o imgui_impl_opengl3.o imgui_tables.o imgui_widgets.o imgui.o -std=c++11 -g -o main -lglfw -lglew -framework OpenGL
+
 main: main.o shader.o camera.o imgui.o 
 	g++ main.o shader.o camera.o imgui_demo.o imgui_draw.o imgui_impl_glfw.o imgui_impl_opengl3.o imgui_tables.o imgui_widgets.o imgui.o -std=c++11 -o main -lglfw -lglew -framework OpenGL
 

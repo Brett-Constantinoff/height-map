@@ -89,6 +89,7 @@ int main(){
     std::cout << "Loaded " << vertex_positions.size() / 3 << " vertex_positions" << std::endl;
     stbi_image_free(data);
 
+    //sets up indices
     std::vector<unsigned> indices;
     for(unsigned i = 0; i < h - 1; i += rez){
         for (unsigned j = 0; j < w; j += rez){
@@ -104,7 +105,6 @@ int main(){
     std::cout << "Created lattice of " << num_strips << " strips with " << tri_per_strip << " triangles each" << std::endl;
     std::cout << "Created " << num_strips * tri_per_strip << " triangles total" << std::endl;
 
-    // first, configure the cube's VAO (and vbo + ibo)
     unsigned int vao, vbo, ibo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -124,9 +124,15 @@ int main(){
     float delta_time = 0.0f;
     float last_frame = 0.0f;
     Camera my_camera;
-    my_camera.position = glm::vec3(0.34f, 3.85f, 11.39f);
+    my_camera.position = glm::vec3(0.34f, 30.0f, 11.39f);
     my_camera.up = glm::vec3(0.0f, 1.0f, 0.0f);
     my_camera.front = glm::vec3(-0.03f, -0.53f, -0.85f);
+
+    glm::vec3 diffuse_color = glm::vec3(0.40f, 0.47f, 0.70f);
+    glm::vec3 ambient_color = glm::vec3(0.1f, 0.1f, 0.1f);
+    glm::vec3 specular_color = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 light_position = glm::vec3(0.0f, 50.0f, 5.0f);
 
     bool main_window = true;
     bool camera_window = false;
@@ -154,17 +160,26 @@ int main(){
             ImGui::Text("Camera front: %.4f, %.4f, %.4f", my_camera.front.x, my_camera.front.y, my_camera.front.z);
         }
 
-    
         glUseProgram(my_shader.ID);
         glBindVertexArray(vao);
 
         glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 10000.0f);
         glm::mat4 view = glm::lookAt(my_camera.position, my_camera.position + my_camera.front, my_camera.up);
+        glm::mat4 normal_matrix = glm::mat4();
+
+        normal_matrix = glm::transpose(model);
+        normal_matrix = glm::inverse(normal_matrix);
 
         glUniformMatrix4fv(glGetUniformLocation(my_shader.ID, "model"), 1, GL_FALSE, &model[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(my_shader.ID, "view"), 1, GL_FALSE, &view[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(my_shader.ID, "projection"), 1, GL_FALSE, &projection[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(my_shader.ID, "normal_matrix"), 1, GL_FALSE, &normal_matrix[0][0]);
+        glUniform3fv(glGetUniformLocation(my_shader.ID, "light_position"), 1, &light_position[0]);
+        glUniform3fv(glGetUniformLocation(my_shader.ID, "light_color"), 1, &light_color[0]);
+        glUniform3fv(glGetUniformLocation(my_shader.ID, "diffuseVal"), 1, &diffuse_color[0]);
+        glUniform3fv(glGetUniformLocation(my_shader.ID, "ambientVal"), 1, &ambient_color[0]);
+        glUniform3fv(glGetUniformLocation(my_shader.ID, "specularVal"), 1, &specular_color[0]);
 
         ImGui::Render();
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
