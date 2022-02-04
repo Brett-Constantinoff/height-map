@@ -164,7 +164,7 @@ int main(){
         glBindVertexArray(vao);
 
         glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 10000.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 100000.0f);
         glm::mat4 view = glm::lookAt(my_camera.position, my_camera.position + my_camera.front, my_camera.up);
         glm::mat4 normal_matrix = glm::mat4();
 

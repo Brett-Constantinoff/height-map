@@ -14,7 +14,7 @@ out vec3 out_frag_position;
 
 void main()
 {
-   vec3 normal = vec3(0, aPos.y, 0);
+   vec3 normal = vec3(0, abs(aPos.y), 0);
    gl_Position = projection * view * model * vec4(aPos, 1.0);
    out_frag_position = (model * vec4(aPos, 1.0)).xyz;
    out_normal = (normal_matrix * vec4(normal, 0.0)).xyz;
@@ -41,7 +41,7 @@ void main()
    vec3 normal = normalize(out_normal);
    vec3 light_direction = normalize(light_position - out_frag_position);
    vec3 view_direction = normalize(out_camera_position - out_frag_position);
-   vec3 ambient = ambientVal * light_color;
+   vec3 ambient = ambientVal * light_color *  2.0;
 
    float diff = max(dot(light_direction, normal), 0.0);
    vec3 diffuse = diffuseVal * light_color * diff;
